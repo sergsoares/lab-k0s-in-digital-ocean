@@ -8,9 +8,9 @@ spec:
   source:
     chart: traefik
     repoURL: https://helm.traefik.io/traefik
+    targetRevision: 22.1.0
     helm:
       releaseName: traefik
-      targetRevision: 22.1.0
       valueFiles:
       - traefik-values.yaml
   destination:
