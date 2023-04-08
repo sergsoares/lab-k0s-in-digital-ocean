@@ -30,6 +30,11 @@ spec:
             exposedPort: 443
             protocol: TCP
 
+        # Suggestion to solve eternal ingress progressing inside ArgoCD
+        # https://github.com/argoproj/argo-cd/issues/1704#issuecomment-1131903042
+        additionalArguments:
+          - "--providers.kubernetesingress.ingressendpoint.publishedservice=traefik/traefik"
+
   destination:
     server: "https://kubernetes.default.svc"
     namespace: traefik
