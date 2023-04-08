@@ -207,9 +207,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    repoURL: https://github.com/sergsoares/lab-k0s-in-digital-ocean.git
     targetRevision: HEAD
-    path: guestbook
+    path: addons
   destination:
     server: https://kubernetes.default.svc
     namespace: guestbook
