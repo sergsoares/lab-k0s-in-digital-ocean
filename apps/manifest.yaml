@@ -40,23 +40,17 @@ spec:
     app: string-is
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
 metadata:
   name: string-is
   namespace: string-is
-  annotations:
-    kubernetes.io/ingress.class: traefik
 spec:
-  ingressClassName: traefik
-  rules:
-  - host: string-is.lab-k0s.ourlab.cc
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: string-is
-            port:
-              number: 3000
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`string-is.lab-k0s.ourlab.cc`)
+      services:
+        - name: string-is
+          port: 3000
