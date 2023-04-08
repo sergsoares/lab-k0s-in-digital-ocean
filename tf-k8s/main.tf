@@ -195,9 +195,11 @@ resource "helm_release" "argocd" {
   wait = true
   timeout = 240
 
+  # https://github.com/argoproj/argo-helm/issues/1780#issuecomment-1433743590
   set {
-    name  = "configs.params.server.insecure"
-    value = false
+    # Run server without TLS
+    name  = "configs.params.server\\.insecure"
+    value = true
   }
 }
 
