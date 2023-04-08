@@ -202,7 +202,7 @@ resource "kubectl_manifest" "argoapp" {
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: guestbook
+  name: addons
   namespace: argo-cd
 spec:
   project: default
@@ -212,7 +212,7 @@ spec:
     path: addons
   destination:
     server: https://kubernetes.default.svc
-    namespace: guestbook
+    namespace: argo-cd
   syncPolicy:
     automated: {}
     syncOptions:
