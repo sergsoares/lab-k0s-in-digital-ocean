@@ -7,8 +7,18 @@ spec:
   entryPoints:
     - websecure
   routes:
-  - kind: Rule
-    match: Host(`argocd.lab-k0s.ourlab.cc`)
-    services:
-    - name: argo-cd-argocd-server
-      port: 443
+    - kind: Rule
+      match: Host(`argocd.lab-k0s.ourlab.cc`)
+      priority: 10
+      services:
+        - name: argo-cd-argocd-server
+          port: 80
+    - kind: Rule
+      match: Host(`argocd.lab-k0s.ourlab.cc`) && Headers(`Content-Type`, `application/grpc`)
+      priority: 11
+      services:
+        - name: argo-cd-argocd-server
+          port: 80
+          scheme: h2c
+  tls:
+    certResolver: default

@@ -194,6 +194,11 @@ resource "helm_release" "argocd" {
   create_namespace = true
   wait = true
   timeout = 240
+
+  set {
+    name  = "configs.params.server.insecure"
+    value = false
+  }
 }
 
 resource "kubectl_manifest" "argoapp" {
