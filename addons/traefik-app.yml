@@ -11,8 +11,25 @@ spec:
     targetRevision: 22.1.0
     helm:
       releaseName: traefik
-      valueFiles:
-      - traefik-values.yaml
+      values: |
+        updateStrategy:
+          type: OnDelete
+
+        deployment:
+          enabled: true
+          kind: DaemonSet
+
+        service:
+          enabled: true
+          type: NodePort
+
+        ports:
+          websecure:
+            hostPort: 443
+            expose: true
+            exposedPort: 443
+            protocol: TCP
+
   destination:
     server: "https://kubernetes.default.svc"
     namespace: traefik
