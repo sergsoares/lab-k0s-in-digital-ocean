@@ -1,8 +1,18 @@
-variable "do_token" { type = string }
+variable "do_token" { 
+  sensitive = true
+  type = string 
+}
+
+
 variable "ssh_keys" { type = list(any) }
 variable "name" { type = string }
 variable "domain" { type = string }
-variable "cloudflare_api_token" { type = string }
+
+
+variable "cloudflare_api_token" { 
+  sensitive = true
+  type = string 
+}
 variable "cloudflare_email" { type = string }
 
 variable "config" { type = string }

@@ -181,57 +181,9 @@ provider "kubernetes" {
   config_path = local.kubeconfig_path
 }
 
-resource "kubernetes_namespace" "traefik" {
+resource "helm_release" "argocd" {
   depends_on = [
     local_sensitive_file.kubeconfig
-  ]
-
-  metadata {
-    name = "traefik"
-  }
-}
-
-resource "kubernetes_secret" "cloudflare_secrets" {
-  depends_on = [
-    kubernetes_namespace.traefik
-  ]
-
-  metadata {
-    name = "cloudflare-secrets"
-    namespace = "traefik"
-  }
-
-
-  data = {
-    CF_API_EMAIL = var.cloudflare_email
-    CF_API_KEY = var.cloudflare_api_token
-  }
-}
-
-# resource "helm_release" "traefik" {
-#   depends_on = [
-#     local_sensitive_file.kubeconfig,
-#     kubernetes_secret.cloudflare_secrets
-#   ]
-
-#   name       = "traefik"
-#   namespace  = "traefik"
-#   repository = "https://helm.traefik.io/traefik"
-#   chart      = "traefik"
-#   create_namespace = true
-#   wait = true
-#   timeout = 240
-
-#   values = [
-#     "${file("helm/traefik.yaml")}"
-#   ]
-# }
-
-
-resource "helm_release" "argo-cd" {
-  depends_on = [
-    local_sensitive_file.kubeconfig,
-    kubernetes_secret.cloudflare_secrets
   ]
 
   name       = "argo-cd"
@@ -242,8 +194,28 @@ resource "helm_release" "argo-cd" {
   create_namespace = true
   wait = true
   timeout = 240
+}
 
-  # values = [
-  #   "${file("helm/argo-cd.yaml")}"
-  # ]
+resource "kubectl_manifest" "argoapp" {
+  override_namespace = "argo-cd"
+  yaml_body = <<YAML
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook
+  namespace: argo-cd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    targetRevision: HEAD
+    path: guestbook
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: guestbook
+  syncPolicy:
+    automated: {}
+    syncOptions:
+      - CreateNamespace=true
+YAML
 }
