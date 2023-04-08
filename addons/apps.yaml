@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: addons
+  namespace: argo-cd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sergsoares/lab-k0s-in-digital-ocean.git
+    targetRevision: HEAD
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-cd
+  syncPolicy:
+    automated: {}
