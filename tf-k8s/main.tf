@@ -154,14 +154,14 @@ resource "k0s_cluster" "this" {
 locals {
   kubeconfig_path = pathexpand("~/.kube/${var.name}")
 }
-resource "time_sleep" "wait_30_seconds" {
+resource "time_sleep" "wait" {
   depends_on = [k0s_cluster.this]
 
-  create_duration = "50s"
+  create_duration = "2m"
 }
 
 resource "local_sensitive_file" "kubeconfig" {
-  depends_on = [time_sleep.wait_30_seconds]
+  depends_on = [time_sleep.wait]
   
   content  = k0s_cluster.this.kubeconfig
   filename = local.kubeconfig_path
