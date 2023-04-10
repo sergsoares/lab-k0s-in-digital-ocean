@@ -10,6 +10,11 @@ variable "domain" {
   type = string
 }
 
+variable "public_ip_dns" {
+  type = string
+  default = "https://ifconfig.me/ip"
+}
+
 variable "cloudflare_api_token" {
   sensitive = true
   type      = string
