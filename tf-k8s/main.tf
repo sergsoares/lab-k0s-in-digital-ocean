@@ -154,7 +154,7 @@ resource "local_sensitive_file" "kubeconfig" {
 }
 
 locals {
-  kubeconfig_path = pathexpand("${k0s_kubeconfig_local_base_path}/${var.name}")
+  kubeconfig_path = pathexpand("${var.k0s_kubeconfig_local_base_path}/${var.name}")
 }
 
 provider "helm" {
