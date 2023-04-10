@@ -17,6 +17,7 @@ variable "cloudflare_api_token" {
 
 variable "do_config" {
   type = string
+  default = ""
 }
 
 variable "do_token" {
@@ -37,6 +38,11 @@ variable "do_region" {
 variable "do_size" {
   type    = string
   default = "s-1vcpu-1gb"
+}
+
+variable "do_worker_quantity" {
+  type    = number
+  default = 1
 }
 
 variable "k0s_port" {
