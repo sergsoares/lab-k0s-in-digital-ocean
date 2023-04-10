@@ -1,6 +1,9 @@
 apply:
 	terraform apply
 
+destroy:
+	terraform destroy
+
 apply-k0s-only:
 	terraform apply -target=local_sensitive_file.kubeconfig
 
