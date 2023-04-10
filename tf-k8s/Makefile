@@ -4,6 +4,9 @@ apply:
 destroy:
 	terraform destroy
 
+apply-cloudflare-workers:
+	terraform apply -target=cloudflare_record.workers
+
 apply-k0s-only:
 	terraform apply -target=local_sensitive_file.kubeconfig
 

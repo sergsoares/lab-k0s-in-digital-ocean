@@ -63,7 +63,7 @@ data "cloudflare_zone" "this" {
 
 resource "cloudflare_record" "controllers" {
   zone_id = data.cloudflare_zone.this.id
-  name    = "controller-${var.name}"
+  name    = "controller.${var.name}"
   value   = digitalocean_droplet.controller.ipv4_address
   type    = "A"
   ttl     = 60
@@ -73,7 +73,7 @@ resource "cloudflare_record" "workers" {
   count =  var.do_worker_quantity
 
   zone_id = data.cloudflare_zone.this.id
-  name    = "worker${count.index}-${var.name}"
+  name    = "worker${count.index}.${var.name}"
   value   = digitalocean_droplet.workers[count.index].ipv4_address
   type    = "A"
   ttl     = 60
