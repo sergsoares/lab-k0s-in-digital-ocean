@@ -63,7 +63,7 @@ data "cloudflare_zone" "this" {
 
 resource "cloudflare_record" "controllers" {
   zone_id = data.cloudflare_zone.this.id
-  name    = var.name
+  name    = "controller-${var.name}"
   value   = digitalocean_droplet.controller.ipv4_address
   type    = "A"
   ttl     = 60
@@ -73,7 +73,7 @@ resource "cloudflare_record" "workers" {
   count =  var.do_worker_quantity
 
   zone_id = data.cloudflare_zone.this.id
-  name    = var.name
+  name    = "worker${count.index}-${var.name}"
   value   = digitalocean_droplet.workers[count.index].ipv4_address
   type    = "A"
   ttl     = 60
@@ -100,7 +100,7 @@ resource "k0s_cluster" "this" {
       role = "controller"
 
       ssh = {
-        address  = digitalocean_droplet.controller.ipv4_address
+        address  = "controller-${var.name}.${var.domain}"
         port     = var.k0s_port
         user     = var.k0s_host_user
         key_path = var.k0s_keypath
@@ -110,7 +110,7 @@ resource "k0s_cluster" "this" {
       role = "worker"
 
       ssh = {
-        address  = digitalocean_droplet.workers[0].ipv4_address
+        address  = "worker0-${var.name}.${var.domain}"
         port     = var.k0s_port
         user     = var.k0s_host_user
         key_path = var.k0s_keypath
@@ -126,12 +126,12 @@ metadata:
   name: ${var.name}
 spec:
   api:
-    externalAddress: ${var.name}.${var.domain}
+    externalAddress: "controller-${var.name}.${var.domain}"
     sans:
-      - ${var.name}.${var.domain}
+      - "controller-${var.name}.${var.domain}"
+      - "worker0-${var.name}.${var.domain}"
       - ${digitalocean_droplet.controller.ipv4_address}
 YAML
-
 }
 
 locals {
@@ -170,10 +170,10 @@ resource "helm_release" "argocd" {
     local_sensitive_file.kubeconfig
   ]
 
-  name             = "argo-cd"
-  namespace        = "argo-cd"
+  name             = "argocd"
+  namespace        = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
+  chart            = "argocd"
   version          = "5.24.0"
   create_namespace = true
   wait             = true
@@ -196,7 +196,7 @@ resource "time_sleep" "wait_argocd" {
 resource "kubectl_manifest" "argoapp" {
   depends_on = [time_sleep.wait_argocd]
 
-  override_namespace = "argo-cd"
+  override_namespace = "argocd"
   yaml_body          = <<YAML
 apiVersion: argoproj.io/v1alpha1
 kind: Application
