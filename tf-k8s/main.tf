@@ -138,9 +138,7 @@ spec:
 YAML
 }
 
-locals {
-  kubeconfig_path = pathexpand("~/.kube/${var.name}")
-}
+
 
 resource "time_sleep" "wait" {
   depends_on = [k0s_cluster.this]
@@ -153,6 +151,10 @@ resource "local_sensitive_file" "kubeconfig" {
 
   content  = k0s_cluster.this.kubeconfig
   filename = local.kubeconfig_path
+}
+
+locals {
+  kubeconfig_path = pathexpand("${k0s_kubeconfig_local_base_path}/${var.name}")
 }
 
 provider "helm" {

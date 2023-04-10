@@ -10,6 +10,11 @@ variable "domain" {
   type = string
 }
 
+variable "k0s_kubeconfig_local_base_path" {
+  type = string
+  default = "~/.kube"
+}
+
 variable "public_ip_dns" {
   type = string
   default = "https://ifconfig.me/ip"
