@@ -11,12 +11,12 @@ variable "domain" {
 }
 
 variable "k0s_kubeconfig_local_base_path" {
-  type = string
+  type    = string
   default = "~/.kube"
 }
 
 variable "public_ip_dns" {
-  type = string
+  type    = string
   default = "https://ifconfig.me/ip"
 }
 
@@ -26,7 +26,7 @@ variable "cloudflare_api_token" {
 }
 
 variable "do_config" {
-  type = string
+  type    = string
   default = ""
 }
 

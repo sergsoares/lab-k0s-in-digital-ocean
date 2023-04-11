@@ -63,7 +63,7 @@ data "cloudflare_zone" "this" {
 
 locals {
   controller_subdomain = "controller.${var.name}"
-  controller_domain = "${local.controller_subdomain}.${var.domain}"
+  controller_domain    = "${local.controller_subdomain}.${var.domain}"
 }
 
 resource "cloudflare_record" "controller" {
@@ -75,7 +75,7 @@ resource "cloudflare_record" "controller" {
 }
 
 resource "cloudflare_record" "workers" {
-  count =  var.do_worker_quantity
+  count = var.do_worker_quantity
 
   zone_id = data.cloudflare_zone.this.id
   name    = "worker${count.index}.${var.name}"
@@ -85,7 +85,7 @@ resource "cloudflare_record" "workers" {
 }
 
 resource "cloudflare_record" "wildcard" {
-  count =  var.do_worker_quantity
+  count = var.do_worker_quantity
 
   zone_id = data.cloudflare_zone.this.id
   name    = "*.${var.name}"
@@ -99,7 +99,7 @@ resource "k0s_cluster" "this" {
   version = var.k0s_kubernetes_version
 
   #https://github.com/k0sproject/k0sctl#host-fields
-  
+
   hosts = [
     {
       role = "controller"
@@ -138,8 +138,6 @@ spec:
       - ${cloudflare_record.workers[0].hostname}
 YAML
 }
-
-
 
 resource "time_sleep" "wait" {
   depends_on = [k0s_cluster.this]
