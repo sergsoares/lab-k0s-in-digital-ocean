@@ -178,7 +178,7 @@ resource "helm_release" "argocd" {
   name             = "argocd"
   namespace        = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argocd"
+  chart            = "argo-cd"
   version          = "5.24.0"
   create_namespace = true
   wait             = true
@@ -195,7 +195,7 @@ resource "helm_release" "argocd" {
 resource "time_sleep" "wait_argocd" {
   depends_on = [helm_release.argocd]
 
-  create_duration = "1m"
+  create_duration = "2m"
 }
 
 resource "kubectl_manifest" "argoapp" {
@@ -207,7 +207,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: addons
-  namespace: argo-cd
+  namespace: argocd
 spec:
   project: default
   source:
@@ -216,7 +216,7 @@ spec:
     path: addons
   destination:
     server: https://kubernetes.default.svc
-    namespace: argo-cd
+    namespace: argocd
   syncPolicy:
     automated: {}
     syncOptions:
