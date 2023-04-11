@@ -1,6 +1,10 @@
 apply:
 	terraform apply
 
+target:
+	SELECTED=`cat main.tf | grep resource | tr -d '"' | awk '{ print $$2 "."  $$3 }' | fzf` ; \
+	terraform apply -target=$$SELECTED
+
 destroy:
 	terraform destroy
 
