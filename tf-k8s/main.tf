@@ -66,7 +66,7 @@ locals {
   controller_domain = "${local.controller_subdomain}.${var.domain}"
 }
 
-resource "cloudflare_record" "controllers" {
+resource "cloudflare_record" "controller" {
   zone_id = data.cloudflare_zone.this.id
   name    = local.controller_subdomain
   value   = digitalocean_droplet.controller.ipv4_address
@@ -105,7 +105,7 @@ resource "k0s_cluster" "this" {
       role = "controller"
 
       ssh = {
-        address  = "${local.controller_domain}"
+        address  = digitalocean_droplet.controller.ipv4_address
         port     = var.k0s_port
         user     = var.k0s_host_user
         key_path = var.k0s_keypath
@@ -115,7 +115,7 @@ resource "k0s_cluster" "this" {
       role = "worker"
 
       ssh = {
-        address  = "worker0.${var.name}.${var.domain}"
+        address  = digitalocean_droplet.workers[0].ipv4_address
         port     = var.k0s_port
         user     = var.k0s_host_user
         key_path = var.k0s_keypath
@@ -131,10 +131,11 @@ metadata:
   name: ${var.name}
 spec:
   api:
-    externalAddress: "${local.controller_domain}"
+    externalAddress: ${digitalocean_droplet.controller.ipv4_address}
     sans:
-      - "${local.controller_domain}"
       - ${digitalocean_droplet.controller.ipv4_address}
+      - ${cloudflare_record.controller.hostname}
+      - ${cloudflare_record.workers[0].hostname}
 YAML
 }
 
