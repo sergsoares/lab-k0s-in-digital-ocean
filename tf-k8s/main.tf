@@ -2,11 +2,11 @@ terraform {
   required_providers {
     digitalocean = {
       source  = "digitalocean/digitalocean"
-      version = ">= 2.7.0"
+      version = "2.27.1"
     }
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 3.0"
+      version = "3.35.0"
     }
     k0s = {
       source  = "adnsio/k0s"
@@ -71,7 +71,7 @@ resource "cloudflare_record" "controller" {
   name    = local.controller_subdomain
   value   = digitalocean_droplet.controller.ipv4_address
   type    = "A"
-  ttl     = 60
+  ttl     = var.cloudflare_ttl
 }
 
 resource "cloudflare_record" "workers" {
@@ -81,7 +81,7 @@ resource "cloudflare_record" "workers" {
   name    = "worker${count.index}.${var.name}"
   value   = digitalocean_droplet.workers[count.index].ipv4_address
   type    = "A"
-  ttl     = 60
+  ttl     = var.cloudflare_ttl
 }
 
 resource "cloudflare_record" "wildcard" {
@@ -91,7 +91,22 @@ resource "cloudflare_record" "wildcard" {
   name    = "*.${var.name}"
   value   = digitalocean_droplet.workers[count.index].ipv4_address
   type    = "A"
-  ttl     = 60
+  ttl     = var.cloudflare_ttl
+}
+
+locals {
+  workerNodes = [for i,v in range(var.do_worker_quantity) :
+    {
+      role = "worker"
+
+      ssh = {
+        address  = digitalocean_droplet.workers[i].ipv4_address
+        port     = var.k0s_port
+        user     = var.k0s_host_user
+        key_path = var.k0s_keypath
+      }
+    }
+  ]
 }
 
 resource "k0s_cluster" "this" {
@@ -99,10 +114,9 @@ resource "k0s_cluster" "this" {
   version = var.k0s_kubernetes_version
 
   #https://github.com/k0sproject/k0sctl#host-fields
-
-  hosts = [
+  hosts = concat([
     {
-      role = "controller"
+      role = "controller+worker"
 
       ssh = {
         address  = digitalocean_droplet.controller.ipv4_address
@@ -110,19 +124,9 @@ resource "k0s_cluster" "this" {
         user     = var.k0s_host_user
         key_path = var.k0s_keypath
       }
-    },
-    {
-      role = "worker"
-
-      ssh = {
-        address  = digitalocean_droplet.workers[0].ipv4_address
-        port     = var.k0s_port
-        user     = var.k0s_host_user
-        key_path = var.k0s_keypath
-      }
     }
-  ]
-
+  ], local.workerNodes)
+  
   # https://github.com/k0sproject/k0sctl#configuration-file
   config = <<YAML
 apiVersion: k0s.k0sproject.io/v1beta1
@@ -179,10 +183,10 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
-  version          = "5.24.0"
+  version          = var.argo_version
   create_namespace = true
   wait             = true
-  timeout          = 240
+  timeout          = var.argo_timeout
 
   # https://github.com/argoproj/argo-helm/issues/1780#issuecomment-1433743590
   set {
