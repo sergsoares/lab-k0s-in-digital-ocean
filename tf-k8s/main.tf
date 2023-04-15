@@ -202,28 +202,33 @@ resource "time_sleep" "wait_argocd" {
   create_duration = "2m"
 }
 
-resource "kubectl_manifest" "argoapp" {
-  depends_on = [time_sleep.wait_argocd]
 
-  override_namespace = "argocd"
-  yaml_body          = <<YAML
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: addons
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/sergsoares/lab-k0s-in-digital-ocean.git
-    targetRevision: HEAD
-    path: addons
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  syncPolicy:
-    automated: {}
-    syncOptions:
-      - CreateNamespace=true
-YAML
+resource "kubernetes_manifest" "application_argocd_addons" {
+  depends_on = [time_sleep.wait_argocd]
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind = "Application"
+    metadata = {
+      name = "addons"
+      namespace = "argocd"
+    }
+    spec = {
+      destination = {
+        namespace = "argocd"
+        server = "https://kubernetes.default.svc"
+      }
+      project = "default"
+      source = {
+        path = "addons"
+        repoURL = "https://github.com/sergsoares/lab-k0s-in-digital-ocean.git"
+        targetRevision = "HEAD"
+      }
+      syncPolicy = {
+        automated = {}
+        syncOptions = [
+          "CreateNamespace=true",
+        ]
+      }
+    }
+  }
 }
