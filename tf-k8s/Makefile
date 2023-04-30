@@ -13,13 +13,13 @@ destroy-all:
 	terraform destroy
 
 apply-cloudflare-workers:
-	terraform apply -target=cloudflare_record.workers
+	doppler run -- terraform apply -target=cloudflare_record.workers
 
 apply-k0s-only:
-	terraform apply -target=local_sensitive_file.kubeconfig
+	doppler run -- terraform apply -target=local_sensitive_file.kubeconfig
 
 apply-argocd:
-	terraform apply -target=helm_release.argocd
+	doppler run -- terraform apply -target=helm_release.argocd
 
 apply-argoapp:
-	terraform apply -target=kubectl_manifest.argoapp
+	doppler run -- terraform apply -target=kubectl_manifest.argoapp
