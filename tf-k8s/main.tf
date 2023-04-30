@@ -152,15 +152,7 @@ spec:
 YAML
 }
 
-resource "time_sleep" "wait" {
-  depends_on = [k0s_cluster.this]
-
-  create_duration = "30s"
-}
-
 resource "local_sensitive_file" "kubeconfig" {
-  depends_on = [time_sleep.wait]
-
   content  = k0s_cluster.this.kubeconfig
   filename = local.kubeconfig_path
 }
