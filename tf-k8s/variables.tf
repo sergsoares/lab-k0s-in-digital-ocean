@@ -2,10 +2,6 @@ variable "name" {
   type = string
 }
 
-variable "ssh_keys" {
-  type = list(any)
-}
-
 variable "domain" {
   type = string
 }
