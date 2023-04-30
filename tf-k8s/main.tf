@@ -57,19 +57,6 @@ resource "digitalocean_droplet" "workers" {
   region   = var.do_region
   size     = var.do_size
   ssh_keys = [digitalocean_ssh_key.base.fingerprint]
-
-  provisioner "remote-exec" {
-    connection {
-      host = self.ipv4_address
-      user = "root"
-      type = "ssh"
-      private_key = file("/Users/sergsoares-personal/.ssh/lab-k0s")
-      timeout = "10s"
-    }
-    
-    when = destroy
-    inline = [ "k0s kubectl uncordon $HOSTNAME" ]
-  }
 }
 
 data "http" "ip" {
