@@ -20,6 +20,11 @@ variable "prevent_destroy_controller" {
   default = false
 }
 
+variable "ssh_key_local_base_path" {
+  type    = string
+  default = "~/.ssh"
+}
+
 variable "k0s_kubeconfig_local_base_path" {
   type    = string
   default = "~/.kube"
@@ -55,6 +60,7 @@ variable "do_region" {
   default = "nyc3"
 }
 
+# Digital Ocean Slug documentation - https://slugs.do-api.dev/
 variable "do_size" {
   type    = string
   default = "s-1vcpu-1gb"

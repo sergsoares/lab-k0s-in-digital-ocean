@@ -27,6 +27,16 @@ terraform {
   }
 }
 
+locals {
+  ssh_publickey_path = pathexpand("~/.ssh/${var.name}.pub")
+  ssh_privatekey_path = pathexpand("~/.ssh/${var.name}")
+}
+
+resource "digitalocean_ssh_key" "base" {
+  name       = "${var.name}-key"
+  public_key = file(local.ssh_publickey_path)
+}
+
 provider "digitalocean" {
   token = var.DIGITAL_OCEAN_TOKEN
 }
@@ -36,7 +46,7 @@ resource "digitalocean_droplet" "controller" {
   image    = var.do_image
   region   = var.do_region
   size     = var.do_size
-  ssh_keys = var.ssh_keys
+  ssh_keys = [digitalocean_ssh_key.base.fingerprint]
 }
 
 resource "digitalocean_droplet" "workers" {
@@ -47,6 +57,19 @@ resource "digitalocean_droplet" "workers" {
   region   = var.do_region
   size     = var.do_size
   ssh_keys = var.ssh_keys
+
+  connection {
+    host = self.ipv4_address
+    user = "root"
+    type = "ssh"
+    private_key = file("/Users/sergsoares-personal/.ssh/lab-k0s")
+    timeout = "2m"
+  }
+
+  provisioner "remote-exec" {
+    when = destroy
+    inline = [ "k0s kubectl uncordon $HOSTNAME" ]
+  }
 }
 
 data "http" "ip" {
@@ -103,7 +126,7 @@ locals {
         address  = digitalocean_droplet.workers[i].ipv4_address
         port     = var.k0s_port
         user     = var.k0s_host_user
-        key_path = var.k0s_keypath
+        key_path = local.ssh_privatekey_path
       }
     }
   ]
@@ -122,7 +145,7 @@ resource "k0s_cluster" "this" {
         address  = digitalocean_droplet.controller.ipv4_address
         port     = var.k0s_port
         user     = var.k0s_host_user
-        key_path = var.k0s_keypath
+        key_path = local.ssh_privatekey_path
       }
     }
   ], local.workerNodes)
@@ -174,61 +197,61 @@ provider "kubernetes" {
   config_path = local.kubeconfig_path
 }
 
-resource "helm_release" "argocd" {
-  depends_on = [
-    local_sensitive_file.kubeconfig
-  ]
+# resource "helm_release" "argocd" {
+#   depends_on = [
+#     local_sensitive_file.kubeconfig
+#   ]
 
-  name             = "argocd"
-  namespace        = "argocd"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
-  version          = var.argo_version
-  create_namespace = true
-  wait             = true
-  timeout          = var.argo_timeout
+#   name             = "argocd"
+#   namespace        = "argocd"
+#   repository       = "https://argoproj.github.io/argo-helm"
+#   chart            = "argo-cd"
+#   version          = var.argo_version
+#   create_namespace = true
+#   wait             = true
+#   timeout          = var.argo_timeout
 
-  # https://github.com/argoproj/argo-helm/issues/1780#issuecomment-1433743590
-  set {
-    # Run server without TLS
-    name  = "configs.params.server\\.insecure"
-    value = true
-  }
-}
+#   # https://github.com/argoproj/argo-helm/issues/1780#issuecomment-1433743590
+#   set {
+#     # Run server without TLS
+#     name  = "configs.params.server\\.insecure"
+#     value = true
+#   }
+# }
 
-resource "time_sleep" "wait_argocd" {
-  depends_on = [helm_release.argocd]
+# resource "time_sleep" "wait_argocd" {
+#   depends_on = [helm_release.argocd]
 
-  create_duration = "2m"
-}
+#   create_duration = "2m"
+# }
 
 
-resource "kubernetes_manifest" "application_argocd_addons" {
-  depends_on = [time_sleep.wait_argocd]
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "Application"
-    metadata = {
-      name      = "addons"
-      namespace = "argocd"
-    }
-    spec = {
-      destination = {
-        namespace = "argocd"
-        server    = "https://kubernetes.default.svc"
-      }
-      project = "default"
-      source = {
-        path           = "addons"
-        repoURL        = "https://github.com/sergsoares/lab-k0s-in-digital-ocean.git"
-        targetRevision = "HEAD"
-      }
-      syncPolicy = {
-        automated = {}
-        syncOptions = [
-          "CreateNamespace=true",
-        ]
-      }
-    }
-  }
-}
+# resource "kubernetes_manifest" "application_argocd_addons" {
+#   depends_on = [time_sleep.wait_argocd]
+#   manifest = {
+#     apiVersion = "argoproj.io/v1alpha1"
+#     kind       = "Application"
+#     metadata = {
+#       name      = "addons"
+#       namespace = "argocd"
+#     }
+#     spec = {
+#       destination = {
+#         namespace = "argocd"
+#         server    = "https://kubernetes.default.svc"
+#       }
+#       project = "default"
+#       source = {
+#         path           = "addons"
+#         repoURL        = "https://github.com/sergsoares/lab-k0s-in-digital-ocean.git"
+#         targetRevision = "HEAD"
+#       }
+#       syncPolicy = {
+#         automated = {}
+#         syncOptions = [
+#           "CreateNamespace=true",
+#         ]
+#       }
+#     }
+#   }
+# }
