@@ -11,13 +11,13 @@ variable "domain" {
 }
 
 variable "cloudflare_ttl" {
-  type = number
+  type    = number
   default = 60
 }
 
 variable "prevent_destroy_controller" {
-  type = bool
-  default = false 
+  type    = bool
+  default = false
 }
 
 variable "k0s_kubeconfig_local_base_path" {
@@ -30,7 +30,12 @@ variable "public_ip_dns" {
   default = "https://ifconfig.me/ip"
 }
 
-variable "cloudflare_api_token" {
+variable "CLOUDFLARE_API_TOKEN" {
+  sensitive = true
+  type      = string
+}
+
+variable "DIGITAL_OCEAN_TOKEN" {
   sensitive = true
   type      = string
 }
@@ -38,11 +43,6 @@ variable "cloudflare_api_token" {
 variable "do_config" {
   type    = string
   default = ""
-}
-
-variable "do_token" {
-  sensitive = true
-  type      = string
 }
 
 variable "do_image" {
@@ -86,12 +86,12 @@ variable "k0s_kubernetes_version" {
 }
 
 variable "argo_version" {
-  type = string
+  type    = string
   default = "5.24.0"
 }
 
 variable "argo_timeout" {
-  type = number
+  type    = number
   default = 240
 }
 

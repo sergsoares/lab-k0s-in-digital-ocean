@@ -28,7 +28,7 @@ terraform {
 }
 
 provider "digitalocean" {
-  token = var.do_token
+  token = var.DIGITAL_OCEAN_TOKEN
 }
 
 resource "digitalocean_droplet" "controller" {
@@ -54,7 +54,7 @@ data "http" "ip" {
 }
 
 provider "cloudflare" {
-  api_token = var.cloudflare_api_token
+  api_token = var.CLOUDFLARE_API_TOKEN
 }
 
 data "cloudflare_zone" "this" {
@@ -95,7 +95,7 @@ resource "cloudflare_record" "wildcard" {
 }
 
 locals {
-  workerNodes = [for i,v in range(var.do_worker_quantity) :
+  workerNodes = [for i, v in range(var.do_worker_quantity) :
     {
       role = "worker"
 
@@ -126,7 +126,7 @@ resource "k0s_cluster" "this" {
       }
     }
   ], local.workerNodes)
-  
+
   # https://github.com/k0sproject/k0sctl#configuration-file
   config = <<YAML
 apiVersion: k0s.k0sproject.io/v1beta1
@@ -207,20 +207,20 @@ resource "kubernetes_manifest" "application_argocd_addons" {
   depends_on = [time_sleep.wait_argocd]
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
-    kind = "Application"
+    kind       = "Application"
     metadata = {
-      name = "addons"
+      name      = "addons"
       namespace = "argocd"
     }
     spec = {
       destination = {
         namespace = "argocd"
-        server = "https://kubernetes.default.svc"
+        server    = "https://kubernetes.default.svc"
       }
       project = "default"
       source = {
-        path = "addons"
-        repoURL = "https://github.com/sergsoares/lab-k0s-in-digital-ocean.git"
+        path           = "addons"
+        repoURL        = "https://github.com/sergsoares/lab-k0s-in-digital-ocean.git"
         targetRevision = "HEAD"
       }
       syncPolicy = {
