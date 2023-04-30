@@ -1,170 +1,164 @@
 terraform {
   required_providers {
-    # VPS
     digitalocean = {
-      source = "digitalocean/digitalocean"
-      version = ">= 2.7.0"
+      source  = "digitalocean/digitalocean"
+      version = "2.27.1"
     }
-    
-    # DNS
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 3.0"
+      version = "3.35.0"
     }
-    
-    # K8S Distribution
     k0s = {
-      source = "adnsio/k0s"
+      source  = "adnsio/k0s"
       version = "0.0.3"
     }
-    
-    # K8S manifest management (Kubectl & Helm)
     kubectl = {
-      source = "gavinbunney/kubectl"
+      source  = "gavinbunney/kubectl"
       version = "1.14.0"
     }
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "2.9.0"
     }
-
     kubernetes = {
-      source = "hashicorp/kubernetes"
+      source  = "hashicorp/kubernetes"
       version = "2.19.0"
     }
-    tls = {
-      source = "hashicorp/tls"
-      version = "4.0.4"
-    }
   }
+}
+
+locals {
+  ssh_publickey_path = pathexpand("~/.ssh/${var.name}.pub")
+  ssh_privatekey_path = pathexpand("~/.ssh/${var.name}")
+}
+
+resource "digitalocean_ssh_key" "base" {
+  name       = "${var.name}-key"
+  public_key = file(local.ssh_publickey_path)
 }
 
 provider "digitalocean" {
-  token = var.do_token
+  token = var.DIGITAL_OCEAN_TOKEN
 }
 
-resource "digitalocean_droplet" "vps" {
-  name   = var.name
-  image  = var.do_image
-  region = var.do_region
-  size   = var.do_size
-  ssh_keys = var.ssh_keys
+resource "digitalocean_droplet" "controller" {
+  name     = "controller-${var.name}"
+  image    = var.do_image
+  region   = var.do_region
+  size     = var.do_size
+  ssh_keys = [digitalocean_ssh_key.base.fingerprint]
+}
+
+resource "digitalocean_droplet" "workers" {
+  count = var.do_worker_quantity
+
+  name     = "worker${count.index}-${var.name}"
+  image    = var.do_image
+  region   = var.do_region
+  size     = var.do_size
+  ssh_keys = [digitalocean_ssh_key.base.fingerprint]
 }
 
 data "http" "ip" {
-  url = "https://ifconfig.me/ip"
-}
-
-resource "digitalocean_firewall" "vps" {
-  name = "public-and-internal-ssh-and-k8s"
-
-  droplet_ids = [digitalocean_droplet.vps.id]
-
-  inbound_rule {
-    protocol         = "tcp"
-    port_range       = "22"
-    source_addresses = ["${data.http.ip.response_body}/32"]
-  }
-
-  inbound_rule {
-    protocol         = "tcp"
-    port_range       = "6443"
-    source_addresses = ["${data.http.ip.response_body}/32"]
-  }
-
-  inbound_rule {
-    protocol         = "tcp"
-    port_range       = "443"
-    source_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  inbound_rule {
-    protocol         = "icmp"
-    source_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  outbound_rule {
-    protocol              = "tcp"
-    port_range            = "53"
-    destination_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  outbound_rule {
-    protocol              = "udp"
-    port_range            = "53"
-    destination_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  outbound_rule {
-    protocol              = "tcp"
-    port_range            = "443"
-    destination_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  outbound_rule {
-    protocol              = "icmp"
-    destination_addresses = ["0.0.0.0/0", "::/0"]
-  }
+  url = var.public_ip_dns
 }
 
 provider "cloudflare" {
-  api_token = var.cloudflare_api_token
+  api_token = var.CLOUDFLARE_API_TOKEN
 }
 
 data "cloudflare_zone" "this" {
   name = var.domain
 }
 
-resource "cloudflare_record" "this" {
+locals {
+  controller_subdomain = "controller.${var.name}"
+  controller_domain    = "${local.controller_subdomain}.${var.domain}"
+}
+
+resource "cloudflare_record" "controller" {
   zone_id = data.cloudflare_zone.this.id
-  name    = var.name
-  value   = digitalocean_droplet.vps.ipv4_address
+  name    = local.controller_subdomain
+  value   = digitalocean_droplet.controller.ipv4_address
   type    = "A"
-  ttl     = 60
+  ttl     = var.cloudflare_ttl
+}
+
+resource "cloudflare_record" "workers" {
+  count = var.do_worker_quantity
+
+  zone_id = data.cloudflare_zone.this.id
+  name    = "worker${count.index}.${var.name}"
+  value   = digitalocean_droplet.workers[count.index].ipv4_address
+  type    = "A"
+  ttl     = var.cloudflare_ttl
 }
 
 resource "cloudflare_record" "wildcard" {
+  count = var.do_worker_quantity
+
   zone_id = data.cloudflare_zone.this.id
   name    = "*.${var.name}"
-  value   = digitalocean_droplet.vps.ipv4_address
+  value   = digitalocean_droplet.workers[count.index].ipv4_address
   type    = "A"
-  ttl     = 60
+  ttl     = var.cloudflare_ttl
+}
+
+locals {
+  workerNodes = [for i, v in range(var.do_worker_quantity) :
+    {
+      role = "worker"
+
+      ssh = {
+        address  = digitalocean_droplet.workers[i].ipv4_address
+        port     = var.k0s_port
+        user     = var.k0s_host_user
+        key_path = local.ssh_privatekey_path
+      }
+    }
+  ]
 }
 
 resource "k0s_cluster" "this" {
   name    = var.name
-  version = var.k8s_version
-  
+  version = var.k0s_kubernetes_version
+
   #https://github.com/k0sproject/k0sctl#host-fields
-  hosts = [
+  hosts = concat([
     {
-      role = "single"
+      role = "controller+worker"
 
       ssh = {
-        address  = digitalocean_droplet.vps.ipv4_address
+        address  = digitalocean_droplet.controller.ipv4_address
         port     = var.k0s_port
         user     = var.k0s_host_user
-        key_path = var.k0s_keypath
+        key_path = local.ssh_privatekey_path
       }
     }
-  ] 
-  config = var.config
-}
+  ], local.workerNodes)
 
-locals {
-  kubeconfig_path = pathexpand("~/.kube/${var.name}")
-}
-resource "time_sleep" "wait" {
-  depends_on = [k0s_cluster.this]
-
-  create_duration = "2m"
+  # https://github.com/k0sproject/k0sctl#configuration-file
+  config = <<YAML
+apiVersion: k0s.k0sproject.io/v1beta1
+kind: ClusterConfig
+metadata:
+  name: ${var.name}
+spec:
+  api:
+    externalAddress: ${digitalocean_droplet.controller.ipv4_address}
+    sans:
+      - ${digitalocean_droplet.controller.ipv4_address}
+      - ${cloudflare_record.controller.hostname}
+YAML
 }
 
 resource "local_sensitive_file" "kubeconfig" {
-  depends_on = [time_sleep.wait]
-  
   content  = k0s_cluster.this.kubeconfig
   filename = local.kubeconfig_path
+}
+
+locals {
+  kubeconfig_path = pathexpand("${var.k0s_kubeconfig_local_base_path}/${var.name}")
 }
 
 provider "helm" {
@@ -179,50 +173,4 @@ provider "kubectl" {
 
 provider "kubernetes" {
   config_path = local.kubeconfig_path
-}
-
-resource "helm_release" "argocd" {
-  depends_on = [
-    local_sensitive_file.kubeconfig
-  ]
-
-  name       = "argo-cd"
-  namespace  = "argo-cd"
-  repository = "https://argoproj.github.io/argo-helm"
-  chart      = "argo-cd"
-  version    = "5.24.0"
-  create_namespace = true
-  wait = true
-  timeout = 240
-
-  # https://github.com/argoproj/argo-helm/issues/1780#issuecomment-1433743590
-  set {
-    # Run server without TLS
-    name  = "configs.params.server\\.insecure"
-    value = true
-  }
-}
-
-resource "kubectl_manifest" "argoapp" {
-  override_namespace = "argo-cd"
-  yaml_body = <<YAML
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: addons
-  namespace: argo-cd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/sergsoares/lab-k0s-in-digital-ocean.git
-    targetRevision: HEAD
-    path: addons
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argo-cd
-  syncPolicy:
-    automated: {}
-    syncOptions:
-      - CreateNamespace=true
-YAML
 }
