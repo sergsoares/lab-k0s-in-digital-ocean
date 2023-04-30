@@ -10,12 +10,15 @@ destroy:
 	terraform destroy -target=$$SELECTED
 
 destroy-all:
-	terraform destroy
+	doppler run -- terraform destroy 
+
+destroy-k0s:
+	doppler run -- terraform destroy -target=local_sensitive_file.kubeconfig
 
 apply-cloudflare-workers:
 	doppler run -- terraform apply -target=cloudflare_record.workers
 
-apply-k0s-only:
+apply-k0s:
 	doppler run -- terraform apply -target=local_sensitive_file.kubeconfig
 
 apply-argocd:
