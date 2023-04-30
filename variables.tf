@@ -1,9 +1,11 @@
 variable "name" {
   type = string
+  default = "lab-k0s"
 }
 
 variable "domain" {
   type = string
+  default = "ourlab.cc"
 }
 
 variable "cloudflare_ttl" {

@@ -174,3 +174,22 @@ provider "kubectl" {
 provider "kubernetes" {
   config_path = local.kubeconfig_path
 }
+
+resource "helm_release" "traefik" {
+  depends_on = [
+    local_sensitive_file.kubeconfig
+  ]
+
+  name       = "traefik"
+  namespace  = "traefik"
+  repository = "https://helm.traefik.io/traefik"
+  chart      = "traefik"
+  create_namespace = true
+  wait = true
+  timeout = 240
+  version = "22.1.0"
+
+  values = [
+    "${file("helm/traefik.yaml")}"
+  ]
+}

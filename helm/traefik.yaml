@@ -1,0 +1,17 @@
+updateStrategy:
+  type: OnDelete
+
+deployment:
+  enabled: true
+  kind: DaemonSet
+
+service:
+  enabled: true
+  type: NodePort
+
+ports:
+  websecure:
+    hostPort: 443
+    expose: true
+    exposedPort: 443
+    protocol: TCP
